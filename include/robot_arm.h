@@ -24,6 +24,14 @@ public:
     int initialize(int max_retry_times);
     int shut_down();
     int set_control_mode(CONTROL_MODE mode);
+    int set_control_mode(int index, CONTROL_MODE mode);
+    void update_encoder_zero_offset(int index, float offset);
+    bool is_brake_opened(int index);
+<<<<<<< Updated upstream
+    int enable_motor(int index, bool enable);
+=======
+    int enable_motor(int index, bool enable, int max_retry_times=500);
+>>>>>>> Stashed changes
 
     // 单关节插值控制接口
     int set_mdh_position(int index, double mdh_pos);

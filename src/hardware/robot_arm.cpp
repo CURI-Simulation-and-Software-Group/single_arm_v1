@@ -119,63 +119,30 @@ int RobotArm::initialize(int max_retry_times) {
     for (int joint = 0; joint < num_joints_; ++joint) {
         if (motor_enable_list_[joint] == 0) 
             continue;
-        int retry_count = 0;
-        bool success = false;    
+        int retry_count = 0;    
         MotorInterface* motor = motors_[joint].get();
         if (motor->get_type() != MotorType::WHJ) {
-            while (!success && retry_count < max_retry_times) {
-                motor->set_velocity(0.0);
-                poll_can_responses(10);
-                if (motor->is_control_success()) {
-                    std::cout << "Joint " << joint << " Enable success" << std::endl;
-                    success = true;
+            enable_motor(joint, true);
+        }else{
+            bool success = false;
+            while (!success && retry_count < max_retry_times){
+                if (motor->set_IAP() == 0) {
+                    poll_canfd_responses(10);
+                    if (motor->is_control_success()) {
+                        success = true;
+                        std::cout << "Joint " << joint << "  set_IAP success" << std::endl;
+                    } else {
+                        std::cout << "Joint " << joint << "  set_IAP failed, retrying .... " << retry_count << std::endl;
+                    }
                 } else {
-                    std::cout << "Joint " << joint << " Enable failed, retrying .... " << retry_count << std::endl;
+                    std::ostringstream oss;
+                    std::cout << "JOINT " << joint << "  sending IAP cmd failed, check wire connection" << retry_count << std::endl;
+                    return -1;
                 }
                 retry_count++;
             }
-            retry_count = 0;
-            success = false;
-        }else{
-            while (!success && retry_count < max_retry_times)
-                    {
-                        if (motor->set_IAP() == 0) {
-                            poll_canfd_responses(10);
-                            if (motor->is_control_success()) {
-                                success = true;
-                                std::cout << "Joint " << joint << "  set_IAP success" << std::endl;
-                            } else {
-                                std::cout << "Joint " << joint << "  set_IAP failed, retrying .... " << retry_count << std::endl;
-                            }
-                        } else {
-                            std::ostringstream oss;
-                            std::cout << "JOINT " << joint << "  sending IAP cmd failed, check wire connection" << retry_count << std::endl;
-                            return -1;
-                        }
-                        retry_count++;
-                    }
-                    success = false;
-                    retry_count = 0;
-                    while (!success && retry_count < max_retry_times) {
-                        if (motor->enable() == 0) {
-                            poll_canfd_responses(10);
-                            if (motor->is_control_success()) {
-                                success = true;
-                                std::cout << "Joint " << joint << " (WHJ) enable success" << std::endl;
-                            } else {
-                                std::cout << "Joint " << joint << " (WHJ) enable failed, retrying .... " << retry_count << std::endl;
-                            }
-                        } else {
-                            std::ostringstream oss;
-                            std::cout << "JOINT " << joint << " (WHJ) sending enable cmd failed, check wire connection" << retry_count << std::endl;
-                            return -1;
-                        }
-                    }
+            enable_motor(joint, true, max_retry_times);
         }
-        
-        
-        
-        
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         
     }
@@ -187,55 +154,119 @@ int RobotArm::shut_down() {
     for (int joint = 0; joint < num_joints_; ++joint) {
         if (motor_enable_list_[joint] == 0) 
             continue;
-        motors_[joint]->disable();
-        if (motors_[joint]->get_type() == MotorType::WHJ) {
-            poll_canfd_responses(10);
-        } else {
-            poll_can_responses(10);
-        }
+        enable_motor(joint, false, 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return 0;
 }
 
 int RobotArm::set_control_mode(CONTROL_MODE mode) {
-    int max_retry_times = 100;
-    int retry_count = 0;
-    bool success = false;
-    double zero_mdh_pos[num_joints_] = {0.0};
     for (int joint = 0; joint < num_joints_; ++joint) {
-        int retry_count = 0;
-        bool success = false;
-        if (motor_enable_list_[joint] == 0) 
-            continue;
-        while (!success && retry_count < max_retry_times) {
-            if (motors_[joint]->select_mode(mode) == 0) {
-                if (motors_[joint]->get_type() != MotorType::WHJ) {
-                    poll_can_responses(10);
-                }
-                else
-                {
-                    poll_canfd_responses(10);
-                }
-                if (motors_[joint]->is_control_success()) {
-                    success = true;
-                    std::cout << "Joint " << joint << "  select_mode success" << std::endl;
-                } else {
-                    std::cout << "Joint " << joint << "  select_mode failed, retrying .... " << retry_count << std::endl;
-                }
-            } else {
-                std::ostringstream oss;
-                std::cout << "JOINT " << joint << "sending select_mode cmd failed, check wire connection" << retry_count << std::endl;
-                return -1;
-            }
-        }
+        set_control_mode(joint, mode);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return 0;
 }
 
+int RobotArm::set_control_mode(int index, CONTROL_MODE mode){
+    if (motor_enable_list_[index] == 0) return 0;
+    int max_retry_times = 100;
+    int retry_count = 0;
+    bool success = false;
+    while (!success && retry_count < max_retry_times) {
+        if (motors_[index]->select_mode(mode) == 0) {
+            if (motors_[index]->get_type() != MotorType::WHJ) {
+                poll_can_responses(10);
+            }
+            else
+            {
+                poll_canfd_responses(10);
+            }
+            if (motors_[index]->is_control_success()) {
+                success = true;
+                // std::cout << "Joint " << index << "  select_mode success" << std::endl;
+            } else {
+                // std::cout << "Joint " << index << "  select_mode failed, retrying .... " << retry_count << std::endl;
+            }
+        } else {
+            std::ostringstream oss;
+            std::cout << "JOINT " << index << "sending select_mode cmd failed, check wire connection" << retry_count << std::endl;
+            return -1;
+        }
+    }
+    return 0;
+}
+
+void RobotArm::update_encoder_zero_offset(int index, float offset){
+    joint_offsets_[index] += offset;
+}
+
+bool RobotArm::is_brake_opened(int index){
+    if (motors_[index]->get_type() == MotorType::WHJ){
+        WhjMotor* whj_motor = dynamic_cast<WhjMotor*>(motors_[index].get());
+        return whj_motor->brake_status_ == 0? true : false;
+    }
+    return true;
+}
+
+<<<<<<< Updated upstream
+int RobotArm::enable_motor(int index, bool enable){
+    int max_retry_times = 500;
+=======
+int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
+>>>>>>> Stashed changes
+    int retry_count = 0;
+    bool success = false;
+    motor_enable_list_[index] == (enable)? 1 : 0;
+    std::string func_type_str= (enable)? " enable " : " disable ";
+    int (MotorInterface::*funcPtr)(void) = (enable)? &MotorInterface::enable : &MotorInterface::disable;
+    while (!success && retry_count < max_retry_times) {
+        if (motors_[index]->get_type() != MotorType::WHJ) {
+            if (enable){
+                motors_[index]->set_velocity(0.0);
+                poll_can_responses(10);
+                if (motors_[index]->is_control_success()) {
+                    success = true;
+                }
+            }else{
+                motors_[index]->disable();
+                poll_can_responses(10);
+                success = true;
+            }
+        }else{
+            if (((*motors_[index]).*funcPtr)() == 0) {
+                poll_canfd_responses(10);
+                if (motors_[index]->is_control_success()) {
+                    success = true;
+                }
+            } else {
+                std::ostringstream oss;
+                oss << "WHJ Motor ID: " << motors_[index]->get_id() 
+                    << func_type_str << "failed, check wire connection" << retry_count;
+                std::cerr << oss.str() << std::endl;
+                return -1;
+            }
+        }
+        retry_count++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    if (!success) {
+        std::ostringstream oss;
+        oss << " Failed to" << func_type_str << max_retry_times 
+            << " times, motor ID: " << motors_[index]->get_id();
+        std::cerr << oss.str() << std::endl;
+        return -1;
+    }
+    return 0;
+}
+
+<<<<<<< Updated upstream
 
 
+
+=======
+>>>>>>> Stashed changes
 int RobotArm::set_mdh_position(int index, double mdh_pos) {
     double joint_pos = mdh_to_joints(index, mdh_pos);
     if (motors_[index]->set_absposition(joint_pos) !=0)
@@ -395,7 +426,7 @@ int RobotArm::move_joint(double *target_joints, double dt, double T)
 
 int RobotArm::move_line_online(const double* target_cart, double dt, double T) {
     char filename[64];
-    snprintf(filename, sizeof(filename), "cart_data_arm_%d.txt");
+    snprintf(filename, sizeof(filename), "cart_data_arm.txt");
     FILE* fwrite_data = fopen(filename, "w");
     if (fwrite_data == nullptr) {
         std::cerr << "open files wrong: " << filename << std::endl;
