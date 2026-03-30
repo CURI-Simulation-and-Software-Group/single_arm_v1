@@ -209,12 +209,7 @@ bool RobotArm::is_brake_opened(int index){
     return true;
 }
 
-<<<<<<< Updated upstream
-int RobotArm::enable_motor(int index, bool enable){
-    int max_retry_times = 500;
-=======
 int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
->>>>>>> Stashed changes
     int retry_count = 0;
     bool success = false;
     motor_enable_list_[index] == (enable)? 1 : 0;
@@ -261,12 +256,6 @@ int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
     return 0;
 }
 
-<<<<<<< Updated upstream
-
-
-
-=======
->>>>>>> Stashed changes
 int RobotArm::set_mdh_position(int index, double mdh_pos) {
     double joint_pos = mdh_to_joints(index, mdh_pos);
     if (motors_[index]->set_absposition(joint_pos) !=0)
