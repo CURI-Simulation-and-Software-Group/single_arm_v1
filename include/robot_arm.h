@@ -26,7 +26,6 @@ public:
     int set_control_mode(CONTROL_MODE mode);
     int set_control_mode(int index, CONTROL_MODE mode);
     void update_encoder_zero_offset(int index, float offset);
-    bool is_brake_opened(int index);
     int enable_motor(int index, bool enable, int max_retry_times=500);
 
     // 单关节插值控制接口
@@ -44,6 +43,8 @@ public:
     void get_all_velocities(double velocities[6]) const;
     void get_all_currents(double currents[6]) const;
     int get_end_effector_pose(double pose[6]);
+    bool is_brake_opened(int index) const;
+    MotorType get_motor_type(int index) const;
     
     // 运动控制接口
     int move_joint(double *target_joints, double dt, double T);

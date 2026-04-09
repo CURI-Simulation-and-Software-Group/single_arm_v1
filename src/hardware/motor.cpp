@@ -57,7 +57,7 @@ int WhjMotor::read_status(void) {
     uint32_t resp_Id = 0;
     uint8_t resp_max_data[64];
     uint8_t resp_dlc = 0;
-    uint8_t send_status = canfd_send(can_dev_index_, 0, can_id, &send_data, dlc);
+    int send_status = canfd_send(can_dev_index_, 0, can_id, &send_data, dlc);
     control_success_ = 0;
     if (send_status < 0) {
         return send_status;
@@ -72,7 +72,7 @@ int WhjMotor::write_register(uint8_t addr, uint8_t values, uint8_t dlc) {
     uint8_t resp_max_data[64];
     uint8_t resp_dlc = 0;
     control_success_ = 0; 
-    uint8_t send_status = canfd_send(can_dev_index_, 0, motor_id_, send_data, dlc);
+    int send_status = canfd_send(can_dev_index_, 0, motor_id_, send_data, dlc);
     if (send_status < 0) {
         return send_status;
     }
@@ -126,7 +126,7 @@ int WhjMotor::servo_control(uint32_t can_id, int32_t controlTarget) {
     uint8_t resp_max_data[64];
     uint8_t resp_dlc = 0;
     control_success_ = 0;
-    uint8_t send_status = canfd_send(can_dev_index_, 0, can_id, send_data, dlc);
+    int send_status = canfd_send(can_dev_index_, 0, can_id, send_data, dlc);
     if (send_status < 0) {
         return send_status;
     }
@@ -141,7 +141,7 @@ RmdMotor::RmdMotor(uint32_t motor_id, int can_dev_index)
 int RmdMotor::disable() {
     uint8_t send_data[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint32_t can_id = motor_id_;
-    uint8_t send_status = canfd_send(can_dev_index_, 0, can_id, send_data, 8);
+    int send_status = canfd_send(can_dev_index_, 0, can_id, send_data, 8);
     if (send_status < 0) {
         return send_status;
     }
@@ -150,7 +150,7 @@ int RmdMotor::disable() {
 int RmdMotor::set_id(uint8_t new_id) {
     uint8_t send_data[8] = {0x20, 0x05, 0x00, 0x00, new_id, 0x00, 0x00, 0x00};
     uint32_t can_id = motor_id_;
-    uint8_t send_status = can_normal_send(can_dev_index_, 0x300, send_data);
+    int send_status = can_normal_send(can_dev_index_, 0x300, send_data);
     if (send_status < 0) {
         std::cout << "Set ID failed: Error sending set ID command." << std::endl;
         return send_status;
@@ -188,7 +188,7 @@ int RmdMotor::set_velocity(double vel_rad_s) {
 
     uint32_t can_id = motor_id_+0x140;
     control_success_ = 0;
-    uint8_t send_status = can_normal_send(can_dev_index_,  can_id, send_data);
+    int send_status = can_normal_send(can_dev_index_,  can_id, send_data);
     if (send_status < 0) {
         return send_status;
     }
@@ -198,7 +198,8 @@ int RmdMotor::set_velocity(double vel_rad_s) {
 int RmdMotor::select_mode(uint8_t control_mode) 
 {
     if (control_mode == cur_control) {
-        set_current(0.0);  
+        // set_current(0.0);  
+        set_velocity(0.0);
         return 0;
     } else if (control_mode == vel_control) {
         // No explicit mode selection command for velocity control in RMD
@@ -227,7 +228,7 @@ int RmdMotor::set_current(double cur_A) {
 
     uint32_t can_id = motor_id_+0x140;
     control_success_ = 0;
-    uint8_t send_status = can_normal_send(can_dev_index_,  can_id, send_data);
+    int send_status = can_normal_send(can_dev_index_,  can_id, send_data);
     if (send_status < 0) {
         return send_status;
     }
@@ -252,7 +253,7 @@ int RmdMotor::set_absposition(double pos_rad) {
     
     uint32_t can_id = motor_id_ + 0x140;
     control_success_ = 0;
-    uint8_t send_status = can_normal_send(can_dev_index_,  can_id, send_data);
+    int send_status = can_normal_send(can_dev_index_,  can_id, send_data);
     if (send_status < 0) {
         return send_status;
     }

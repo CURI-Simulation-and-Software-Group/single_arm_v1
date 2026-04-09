@@ -130,7 +130,7 @@ int RobotArm::initialize(int max_retry_times) {
                     poll_canfd_responses(10);
                     if (motor->is_control_success()) {
                         success = true;
-                        std::cout << "Joint " << joint << "  set_IAP success" << std::endl;
+                        // std::cout << "Joint " << joint << "  set_IAP success" << std::endl;
                     } else {
                         std::cout << "Joint " << joint << "  set_IAP failed, retrying .... " << retry_count << std::endl;
                     }
@@ -144,7 +144,6 @@ int RobotArm::initialize(int max_retry_times) {
             enable_motor(joint, true, max_retry_times);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     return 0;
@@ -201,12 +200,16 @@ void RobotArm::update_encoder_zero_offset(int index, float offset){
     joint_offsets_[index] += offset;
 }
 
-bool RobotArm::is_brake_opened(int index){
+bool RobotArm::is_brake_opened(int index) const{
     if (motors_[index]->get_type() == MotorType::WHJ){
         WhjMotor* whj_motor = dynamic_cast<WhjMotor*>(motors_[index].get());
         return whj_motor->brake_status_ == 0? true : false;
     }
     return true;
+}
+
+MotorType RobotArm::get_motor_type(int index) const{
+    return motors_[index]->get_type();
 }
 
 int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
@@ -225,7 +228,7 @@ int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
                 }
             }else{
                 motors_[index]->disable();
-                poll_can_responses(10);
+                // poll_can_responses(10);
                 success = true;
             }
         }else{
@@ -252,6 +255,22 @@ int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
             << " times, motor ID: " << motors_[index]->get_id();
         std::cerr << oss.str() << std::endl;
         return -1;
+    }
+
+    //Check if brake opened 
+    if (enable){
+        set_control_mode(index, CONTROL_MODE::pos_control); //WHJ must set to position for brake to be release
+        retry_count = 0;
+        bool brake_opened = false;
+        while (!brake_opened && retry_count < max_retry_times){
+            read_status(index);
+            brake_opened = is_brake_opened(index);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            retry_count++;
+        }
+        if (!brake_opened){
+            return -2;
+        }
     }
     return 0;
 }
@@ -381,8 +400,8 @@ int RobotArm::move_joint(double *target_joints, double dt, double T)
             //                 << " | act pos: " << get_mdh_position(joint) << " | act vel: " << get_velocity(joint) 
             //                 << " | act cur: " << get_current(joint)  << std::endl;
             // }    
-            fprintf(fwrite_data, "%.4f %.4f %.4f %.4f ", 
-                    ref_pos, get_mdh_position(joint), get_velocity(joint), get_current(joint));
+            fprintf(fwrite_data, "%.4f %.4f %.4f ", 
+                    ref_pos, get_mdh_position(joint), get_velocity(joint)*RAD_TO_DEG);
         }
 
         auto cycle_end = std::chrono::steady_clock::now();
