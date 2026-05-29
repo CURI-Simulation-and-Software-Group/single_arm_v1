@@ -122,7 +122,7 @@ int RobotArm::initialize(int max_retry_times) {
         int retry_count = 0;    
         MotorInterface* motor = motors_[joint].get();
         if (motor->get_type() != MotorType::WHJ) {
-            enable_motor(joint, true);
+            if (enable_motor(joint, true) != 0) return -1;
         }else{
             bool success = false;
             while (!success && retry_count < max_retry_times){
@@ -141,7 +141,7 @@ int RobotArm::initialize(int max_retry_times) {
                 }
                 retry_count++;
             }
-            enable_motor(joint, true, max_retry_times);
+            if (enable_motor(joint, true, max_retry_times) != 0) return -1;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
@@ -269,6 +269,7 @@ int RobotArm::enable_motor(int index, bool enable, int max_retry_times){
             retry_count++;
         }
         if (!brake_opened){
+            std::cout << "joint: " << index <<" brake haven't opened!!!!\n";
             return -2;
         }
     }
