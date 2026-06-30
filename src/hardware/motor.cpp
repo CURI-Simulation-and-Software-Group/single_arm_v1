@@ -303,7 +303,7 @@ int RmdMotor::decode_motor_data(uint8_t* resp_max_data) {
 int RmdMotor::decode_motor_data_2(uint8_t* resp_max_data) {
     // DATA[1]: temperature (not used here)
 
-    int32_t angle_deg = (int16_t)((resp_max_data[7] << 24) | resp_max_data[6] << 16 |
+    int32_t angle_deg = (int32_t)((resp_max_data[7] << 24) | resp_max_data[6] << 16 |
                                   resp_max_data[5] << 8 | resp_max_data[4]);
     
     pos_ = angle_deg * 0.01f * (3.141592653589793f / 180.0f);  // deg -> rad

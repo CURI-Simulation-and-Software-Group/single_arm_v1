@@ -106,12 +106,12 @@ int RobotArm::poll_can_responses(int timeout_ms) {
     return 0;
 }
 double RobotArm::mdh_to_joints(int index, const double mdh_rad) {
-    double joints_rad = joint_offsets_[index] + joint_signs_[index] * mdh_rad;
+    double joints_rad = joint_signs_[index] * (mdh_rad + joint_offsets_[index]);
     return joints_rad;
 }
 
 double RobotArm::joints_to_mdh(int index, const double joints_rad) {
-    double mdh_rad = (joint_signs_[index] * (joints_rad - joint_offsets_[index]));
+    double mdh_rad = (joint_signs_[index] * joints_rad - joint_offsets_[index]);
     return mdh_rad;
 }
 
